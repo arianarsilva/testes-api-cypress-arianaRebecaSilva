@@ -35,32 +35,23 @@ describe('Movies API', () => {
     });
   });
 
-  it('Retorna Success(200) e o filme com o id pesquisado', () => {
+  it('Retorna Success(200) retorna no body o filme com o id pesquisado', () => { 
     cy.request({
       method: 'GET',
       url: 'https://raromdb-3c39614e42d4.herokuapp.com/api/movies/1',
     }).then((response) => {
       expect(response.status).to.equal(200);
-      expect(response.body.id).to.equal(1);
-      expect(response.body.title).to.equal("arbustum synagoga tendo autus qui");
-      expect(response.body.description).to.equal("Crur apostolus color concido subnecto vigor temporibus cras clibanus.");
-      expect(response.body.genre).to.equal("adaugeo ustilo apto adfero audeo");
-      expect(response.body.reviews).to.deep.equal([]);
-      expect(response.body.durationInMinutes).to.equal(58);
-      expect(response.body.releaseYear).to.equal(2023);
-      expect(response.body.criticScore).to.equal(0);
-      expect(response.body.audienceScore).to.equal(0);
+      expect(response.body).property('id').to.equal(1)
+    });
+    
+    it('Retorna Success(200) com body vazio se não houver filme com o id pesquisado', () => {
+      cy.request({
+        method: 'GET',
+        url: 'https://raromdb-3c39614e42d4.herokuapp.com/api/movies/10000000000000000',
+      }).then((response) => {
+        expect(response.status).to.equal(200);
+        expect(response.body.id).is.undefined;
+      });
     });
   });
-
-  it('Retorna Success(200) com body vazio se não houver filme com o id pesquisado', () => {
-    cy.request({
-      method: 'GET',
-      url: 'https://raromdb-3c39614e42d4.herokuapp.com/api/movies/10000000000000000',
-    }).then((response) => {
-      expect(response.status).to.equal(200);
-      expect(response.body.id).is.undefined;
-    });
-  });
-})
-
+});

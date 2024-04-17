@@ -37,11 +37,11 @@ describe('Auth API', () => {
       expect(response.body.statusCode).to.be.equal(401);
     });
   });
-  it('Retorna Unauthorized(401) ao tentar autenticar um usuário com senha errada', () => {
+  it('Retorna Unauthorized(401) ao tentar autenticar um usuário com senha diferente da cadastrada', () => {
     cy.request({
       method: 'POST', url: 'https://raromdb-3c39614e42d4.herokuapp.com/api/auth/login', body: {
         email: user.email,
-        password: '1234',
+        password: faker.internet.password({ length: 12 }),
       },
       failOnStatusCode: false,
     }).then((response) => {
