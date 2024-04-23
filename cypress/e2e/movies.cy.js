@@ -10,7 +10,7 @@ describe('Teste da rota /Movies', () => {
     cy.promoveAdmin();
   });
 
-  it('Retorna Success(201) para criação de filmes', () => {
+  it('Retorna Created(201) para criação de filmes', () => {
     cy.fixture('/filme.json').then((filme) => {
       cy.request({
         method: 'POST',
@@ -23,26 +23,25 @@ describe('Teste da rota /Movies', () => {
         .then((response) => {
           expect(response.status).to.equal(201)
           filmeId = response.body.id
-          cy.log(filmeId)
         })
     })
   });
+
   it('Retorna Bad Request(400) para criação de filmes', () => {
-    cy.fixture('/filme.json').then((filme) => {
-      cy.request({
-        method: 'POST',
-        url: '/movies',
-        body: {},
-        headers: {
-          Authorization: `Bearer ${Cypress.env('accessToken')}`
-        },
-        failOnStatusCode: false
-      }).then((response) => {
-        expect(response.status).to.equal(400);
-      });
+    cy.request({
+      method: 'POST',
+      url: '/movies',
+      body: {},
+      headers: {
+        Authorization: `Bearer ${Cypress.env('accessToken')}`
+      },
+      failOnStatusCode: false
+    }).then((response) => {
+      expect(response.status).to.equal(400);
     });
   });
-  it('Retorna Success (204) ao atualizar um filme', () => {
+
+  it('Retorna No Content (204) ao atualizar um filme', () => {
     cy.fixture('/filmeAtualizado.json').then((filmeAtualizado) => {
       cy.request({
         method: 'PUT',
@@ -58,40 +57,29 @@ describe('Teste da rota /Movies', () => {
   });
 
   it('Retorna Movie not found(404) com um filmeId inválido para atualizar', () => {
-  
-    cy.fixture('/filmeDelete.json').then((filmeDelete) => {
+    cy.criarFilme().then((response) => cy.wrap(response.id).as('filmeIdDelete'));
+    cy.get("@filmeIdDelete").then((filmeIdDelete) => cy.deletarFilme(filmeIdDelete));
+    cy.get("@filmeIdDelete").then((filmeIdDelete) => {
       cy.request({
-        method: 'POST',
-        url: '/movies',
-        body: filmeDelete,
+        method: 'PUT',
+        url: `/movies/${filmeIdDelete}`,
+        body: {
+          "title": "De volta para o Futuro 2",
+          "genre": "Aventura",
+          "description": "Descrição do segundo filme lançado em 1989.",
+          "durationInMinutes": 108,
+          "releaseYear": 1989
+        },
         headers: {
           Authorization: `Bearer ${Cypress.env('accessToken')}`
         },
-      })
-        .then((response) => {
-          expect(response.status).to.equal(201);
-          cy.wrap(response.body.id).as("filmeIdDelete")
-          cy.deletarFilme(response.body.id)
-        })
-      cy.get("@filmeIdDelete").then((filmeIdDelete) => {
-        cy.request({
-          method: 'PUT',
-          url: `/movies/${filmeIdDelete}`,
-          body: {
-            movieId: filmeIdDelete,
-            score: 5,
-            reviewText: "Aqui está a descrição do filme",
-          },
-          headers: {
-            Authorization: `Bearer ${Cypress.env('accessToken')}`
-          },
-          failOnStatusCode: false
-        }).then((response) => {
-          expect(response.status).to.equal(404)
-        })
+        failOnStatusCode: false
+      }).then((response) => {
+        expect(response.status).to.equal(404)
       })
     });
   });
+
   it('Retorna Success(200) para consulta de Movies e uma lista de filmes', () => {
     cy.request('GET', '/movies').then((response) => {
       expect(response.status).to.equal(200);
@@ -129,22 +117,38 @@ describe('Teste da rota /Movies', () => {
   });
 
   it('Retorna Success(200) e body do filme com o id pesquisado', () => {
-    cy.request({
-      method: 'GET',
-      url: `/movies/${filmeId}`,
-    }).then((response) => {
-      expect(response.status).to.equal(200);
-    })
+    cy.criarFilme().then((response) => cy.wrap(response.id).as('filmeId'));
+    cy.get('@filmeId').then((id) => cy.criarReview(id));
+    cy.get('@filmeId').then((filmeId) => {
+      cy.request({
+        method: 'GET',
+        url: `/movies/${filmeId}`,
+      }).then((response) => {
+        expect(response.status).to.equal(200);
+        const body = response.body;
+        expect(body.title).to.equal("De volta para o Futuro");
+        expect(body.genre).to.equal("Ficção Científica");
+        expect(body.description).to.equal("Descrição do filme");
+        expect(body.durationInMinutes).to.equal(116);
+        expect(body.releaseYear).to.equal(1985);
+        expect(body.reviews[0].score).to.equal(5)
+        expect(body.reviews[0].reviewText).to.equal("Aqui está a descrição do filme")
+      })
+    });
   });
 
   it('Retorna Success(200) com body vazio se não houver filme com o id pesquisado', () => {
-    cy.request({
-      method: 'GET',
-      url: '/movies/10000000000000000',
-    }).then((response) => {
-      expect(response.status).to.equal(200);
-      expect(response.body.id).undefined;
-    });
+    cy.criarFilme().then((response) => cy.wrap(response.id).as('idDeletado'));
+    cy.get("@idDeletado").then((idDeletado) => cy.deletarFilme(idDeletado));
+    cy.get("@idDeletado").then((idDeletado) => {
+      cy.request({
+        method: 'GET',
+        url: `/movies/${idDeletado}`,
+      }).then((response) => {
+        expect(response.status).to.equal(200);
+        expect(response.body.id).undefined;
+      });
+    })
   });
 });
 

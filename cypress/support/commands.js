@@ -1,28 +1,3 @@
-// ***********************************************
-// This example commands.js shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
 Cypress.Commands.add('criarUsuario', (user) => {
     cy.request({
         method: 'POST',
@@ -41,7 +16,6 @@ Cypress.Commands.add('login', (email, password) => {
         }
     }).then((response) => {
         const accessToken = response.body.accessToken
-        console.log(accessToken);
         Cypress.env('accessToken', accessToken)
     })
 })
@@ -56,7 +30,7 @@ Cypress.Commands.add('promoveAdmin', () => {
     })
 })
 
-Cypress.Commands.add('deletarFilme', function (id) {
+Cypress.Commands.add('deletarFilme', (id) => {
     cy.request({
         method: 'DELETE',
         url: '/movies/' + id,
@@ -64,4 +38,32 @@ Cypress.Commands.add('deletarFilme', function (id) {
             Authorization: `Bearer ${Cypress.env('accessToken')}`
         }
     });
+});
+
+Cypress.Commands.add('criarFilme', () => {
+    cy.fixture('/filme.json').then((filme) => {
+        cy.request({
+            method: 'POST',
+            url: '/movies',
+            body: filme,
+            headers: {
+                Authorization: `Bearer ${Cypress.env('accessToken')}`
+            }
+        })
+    }).then((response) => response.body);
+});
+
+Cypress.Commands.add('criarReview', (id) => {
+    cy.request({
+        method: 'POST',
+        url: '/users/review',
+        body: {
+            movieId: id,
+            score: 5,
+            reviewText: "Aqui está a descrição do filme",
+        },
+        headers: {
+            Authorization: `Bearer ${Cypress.env('accessToken')}`
+        }
+    })
 });

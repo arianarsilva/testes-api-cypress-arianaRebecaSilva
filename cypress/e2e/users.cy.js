@@ -1,13 +1,9 @@
 import { faker } from '@faker-js/faker';
-let filmeIdDelete
+
 describe('Teste da API Raro - USERS', function () {
   const usuario = criarUsuario();
-  const senha = usuario.password;
-  const email = usuario.email;
   let usuarioCriado;
   let accessToken;
-  let filmeId;
-
 
   it('Deve criar um usuário', function () {
     cy.request('POST', '/users', usuario)
@@ -30,7 +26,6 @@ describe('Teste da API Raro - USERS', function () {
         accessToken = response.body.accessToken;
       });
   });
-
 
   it('Deve consultar usuário criado', function () {
     cy.request({
@@ -78,7 +73,7 @@ describe('Teste da API Raro - USERS', function () {
       url: '/users',
       body: {
         name: usuario.name,
-        email: email,
+        email: usuario.email,
         password: '1234',
       },
       failOnStatusCode: false,
@@ -123,23 +118,29 @@ describe('Teste da API Raro - USERS', function () {
       });
   });
 
-  it('Deve criar uma review', () => {
-    cy.fixture('/filme.json').then((filme) => {
+  it('Retorna Created(201) ao criar uma review', () => {
+    cy.login(usuario.email, usuario.password);
+    cy.promoveAdmin();
+    cy.criarFilme().then((response) => cy.wrap(response.id).as('filmeId'));
+    cy.get('@filmeId').then((filmeId) => {
       cy.request({
         method: 'POST',
-        url: '/movies',
-        body: filme,
+        url: '/users/review',
+        body: {
+          movieId: filmeId,
+          score: 5,
+          reviewText: "Aqui está a descrição do filme",
+        },
         headers: {
-          Authorization: `Bearer ${accessToken}`
+          Authorization: `Bearer ${Cypress.env('accessToken')}`
         }
       })
         .then((response) => {
           expect(response.status).to.equal(201)
-          cy.wrap(response.body.id).as('filmeId')
         })
-    })
+    });
   });
-  it('Deve consultar a lista de reviews', () => {
+  it('Retornar Success (200) ao consultar a lista de reviews', () => {
     cy.request({
       method: 'GET',
       url: '/users/review/all',
@@ -150,7 +151,7 @@ describe('Teste da API Raro - USERS', function () {
       expect(response.status).to.equal(200)
     })
   })
-  it('Retorna Bad Request(400) com um filmeId inválido para avaliar', () => {
+  it('Retorna Bad Request(400) ao tentar avaliar um filme com id inválido', () => {
     cy.request({
       method: 'POST',
       url: '/users/review',
@@ -167,6 +168,7 @@ describe('Teste da API Raro - USERS', function () {
       expect(response.status).to.equal(400)
     })
   })
+
   it('Retorna Unauthorized(401) com o acesso inválido para avaliar um filme', () => {
     cy.fixture('/filme.json').then((filme) => {
       cy.request({
@@ -179,40 +181,27 @@ describe('Teste da API Raro - USERS', function () {
       })
     })
   })
-  it('Retorna Movie not found(404) com um filmeId inválido para avaliar', () => {
-    let filmeIdDelete;
+
+  it('Retorna Movie not found(404) ao tentar avaliar um filme que nao existe', () => {
     cy.login(usuario.email, usuario.password);
     cy.promoveAdmin();
-    cy.fixture('/filmeDelete.json').then((filmeDelete) => {
+    cy.criarFilme().then((response) => cy.wrap(response.id).as('filmeIdDelete'));
+    cy.get("@filmeIdDelete").then((filmeIdDelete) => cy.deletarFilme(filmeIdDelete))
+    cy.get("@filmeIdDelete").then((filmeIdDelete) => {
       cy.request({
         method: 'POST',
-        url: '/movies',
-        body: filmeDelete,
+        url: '/users/review',
+        body: {
+          movieId: filmeIdDelete,
+          score: 5,
+          reviewText: "Aqui está a descrição do filme",
+        },
         headers: {
           Authorization: `Bearer ${Cypress.env('accessToken')}`
         },
-      })
-        .then((response) => {
-          expect(response.status).to.equal(201);
-          cy.wrap(response.body.id).as("filmeIdDelete")
-          cy.deletarFilme(response.body.id)
-        })
-      cy.get("@filmeIdDelete").then((filmeIdDelete) => {
-        cy.request({
-          method: 'POST',
-          url: '/users/review',
-          body: {
-            movieId: filmeIdDelete,
-            score: 5,
-            reviewText: "Aqui está a descrição do filme",
-          },
-          headers: {
-            Authorization: `Bearer ${Cypress.env('accessToken')}`
-          },
-          failOnStatusCode: false
-        }).then((response) => {
-          expect(response.status).to.equal(404)
-        })
+        failOnStatusCode: false
+      }).then((response) => {
+        expect(response.status).to.equal(404)
       })
     })
   })
