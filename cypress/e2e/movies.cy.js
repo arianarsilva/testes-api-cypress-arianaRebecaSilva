@@ -26,8 +26,22 @@ describe('Teste da rota /Movies', () => {
           cy.log(filmeId)
         })
     })
-  })
-
+  });
+  it('Retorna Bad Request(400) para criação de filmes', () => {
+    cy.fixture('/filme.json').then((filme) => {
+      cy.request({
+        method: 'POST',
+        url: '/movies',
+        body: {},
+        headers: {
+          Authorization: `Bearer ${Cypress.env('accessToken')}`
+        },
+        failOnStatusCode: false
+      }).then((response) => {
+        expect(response.status).to.equal(400);
+      });
+    });
+  });
   it('Retorna Success (204) ao atualizar um filme', () => {
     cy.fixture('/filmeAtualizado.json').then((filmeAtualizado) => {
       cy.request({
@@ -43,6 +57,41 @@ describe('Teste da rota /Movies', () => {
     })
   });
 
+  it('Retorna Movie not found(404) com um filmeId inválido para atualizar', () => {
+  
+    cy.fixture('/filmeDelete.json').then((filmeDelete) => {
+      cy.request({
+        method: 'POST',
+        url: '/movies',
+        body: filmeDelete,
+        headers: {
+          Authorization: `Bearer ${Cypress.env('accessToken')}`
+        },
+      })
+        .then((response) => {
+          expect(response.status).to.equal(201);
+          cy.wrap(response.body.id).as("filmeIdDelete")
+          cy.deletarFilme(response.body.id)
+        })
+      cy.get("@filmeIdDelete").then((filmeIdDelete) => {
+        cy.request({
+          method: 'PUT',
+          url: `/movies/${filmeIdDelete}`,
+          body: {
+            movieId: filmeIdDelete,
+            score: 5,
+            reviewText: "Aqui está a descrição do filme",
+          },
+          headers: {
+            Authorization: `Bearer ${Cypress.env('accessToken')}`
+          },
+          failOnStatusCode: false
+        }).then((response) => {
+          expect(response.status).to.equal(404)
+        })
+      })
+    });
+  });
   it('Retorna Success(200) para consulta de Movies e uma lista de filmes', () => {
     cy.request('GET', '/movies').then((response) => {
       expect(response.status).to.equal(200);
@@ -53,7 +102,7 @@ describe('Teste da rota /Movies', () => {
       expect(response.body[0]).has.property('description');
       expect(response.body[0]).has.property('totalRating');
       expect(response.body[0]).has.property('durationInMinutes');
-      expect(response.body[0]).has.property('releaseYear');
+      expect(response.body[0]).has.property('releaseYear')
     });
   });
 
@@ -106,4 +155,3 @@ function createUserForMovies() {
     password: faker.internet.password({ length: 12 }),
   };
 };
-

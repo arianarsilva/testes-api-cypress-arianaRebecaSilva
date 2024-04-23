@@ -55,3 +55,13 @@ Cypress.Commands.add('promoveAdmin', () => {
         }
     })
 })
+
+Cypress.Commands.add('deletarFilme', function (id) {
+    cy.request({
+        method: 'DELETE',
+        url: '/movies/' + id,
+        headers: {
+            Authorization: `Bearer ${Cypress.env('accessToken')}`
+        }
+    });
+});
